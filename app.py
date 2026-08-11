@@ -48,25 +48,36 @@ if file_ant and file_nue:
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
-        # Limpieza de claves para asegurar coincidencias correctas
-        df_ant[col_id_ant] = df_ant[col_id_ant].astype(str).str.strip().str.upper()
-        df_nue[col_id_nue] = df_nue[col_id_nue].astype(str).str.strip().str.upper()
+        # Limpieza de datos: eliminar filas donde la clave sea nula o vacía
+        df_ant_clean = df_ant.dropna(subset=[col_id_ant]).copy()
+        df_nue_clean = df_nue.dropna(subset=[col_id_nue]).copy()
 
-        # Nombres asignados tras el merge
+        # Convertir a texto, limpiar espacios y pasar a mayúsculas
+        df_ant_clean[col_id_ant] = df_ant_clean[col_id_ant].astype(str).str.strip().str.upper()
+        df_nue_clean[col_id_nue] = df_nue_clean[col_id_nue].astype(str).str.strip().str.upper()
+
+        # Filtrar cadenas 'NAN' o vacías que resulten de la conversión
+        df_ant_clean = df_ant_clean[~df_ant_clean[col_id_ant].isin(['', 'NAN', 'NONE'])]
+        df_nue_clean = df_nue_clean[~df_nue_clean[col_id_nue].isin(['', 'NAN', 'NONE'])]
+
+        # Eliminar registros duplicados por clave en cada archivo
+        df_ant_clean = df_ant_clean.drop_duplicates(subset=[col_id_ant])
+        df_nue_clean = df_nue_clean.drop_duplicates(subset=[col_id_nue])
+
+        # Nombres tras la unión
         col_resp_ant_renamed = f"{col_resp_ant}_ANTERIOR"
         col_resp_nue_renamed = f"{col_resp_nue}_NUEVO"
 
-        # Cruce de datos
+        # Cruce de datos (Outer Merge)
         merged = pd.merge(
-            df_ant, 
-            df_nue, 
+            df_ant_clean, 
+            df_nue_clean, 
             left_on=col_id_ant, 
             right_on=col_id_nue, 
             how="outer", 
             suffixes=("_ANTERIOR", "_NUEVO")
         )
 
-        # Manejar nombres si las columnas tenían títulos distintos
         if col_resp_ant_renamed not in merged.columns:
             col_resp_ant_renamed = col_resp_ant
         if col_resp_nue_renamed not in merged.columns:
@@ -78,9 +89,11 @@ if file_ant and file_nue:
         col_desc_ant_m = f"{col_desc_ant}_ANTERIOR" if f"{col_desc_ant}_ANTERIOR" in merged.columns else col_desc_ant
         col_desc_nue_m = f"{col_desc_nue}_NUEVO" if f"{col_desc_nue}_NUEVO" in merged.columns else col_desc_nue
 
-        # 1. Bienes localizados en ambos
+        # Classificación de registros
         encontrados = merged[merged[col_id_ant_m].notna() & merged[col_id_nue_m].notna()].copy()
-        
+        faltantes = merged[merged[col_id_ant_m].notna() & merged[col_id_nue_m].isna()].copy()
+        nuevos = merged[merged[col_id_ant_m].isna() & merged[col_id_nue_m].notna()].copy()
+
         if not encontrados.empty:
             def detectar_cambio(row):
                 r_ant = str(row[col_resp_ant_renamed]).strip() if pd.notna(row[col_resp_ant_renamed]) else ""
@@ -91,16 +104,10 @@ if file_ant and file_nue:
 
             encontrados["Estado_Resguardo"] = encontrados.apply(detectar_cambio, axis=1)
 
-        # 2. Pendientes de localizar (Estaban en anterior, no en nuevo)
-        faltantes = merged[merged[col_id_ant_m].notna() & merged[col_id_nue_m].isna()].copy()
-
-        # 3. Nuevos ingresos / Sobrantes (Están en nuevo, no en anterior)
-        nuevos = merged[merged[col_id_ant_m].isna() & merged[col_id_nue_m].notna()].copy()
-
         # Métricas principales
         m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("Inventario Anterior", len(df_ant))
-        m2.metric("Inventario Nuevo", len(df_nue))
+        m1.metric("Inventario Anterior (Válidos)", len(df_ant_clean))
+        m2.metric("Inventario Nuevo (Válidos)", len(df_nue_clean))
         m3.metric("Bienes Coincidentes", len(encontrados))
         m4.metric("🚨 Faltantes", len(faltantes))
         m5.metric("➕ Sobrantes / Nuevos", len(nuevos))
