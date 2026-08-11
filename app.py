@@ -18,6 +18,7 @@ with col2:
     file_nue = st.file_uploader("Sube el archivo nuevo (Excel/CSV)", type=["xlsx", "xls", "csv"], key="nue")
 
 if file_ant and file_nue:
+    @st.cache_data
     def cargar_datos(file):
         if file.name.endswith(".csv"):
             return pd.read_csv(file)
@@ -48,71 +49,66 @@ if file_ant and file_nue:
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
-        # Limpieza de datos: eliminar filas donde la clave sea nula o vacía
-        df_ant_clean = df_ant.dropna(subset=[col_id_ant]).copy()
-        df_nue_clean = df_nue.dropna(subset=[col_id_nue]).copy()
+        # Normalizar claves: eliminar decimales flotantes como .0, espacios y pasar a texto
+        def limpiar_clave(val):
+            if pd.isna(val):
+                return ""
+            val_str = str(val).strip()
+            if val_str.endswith(".0"):
+                val_str = val_str[:-2]
+            return val_str.upper()
 
-        # Convertir a texto, limpiar espacios y pasar a mayúsculas
-        df_ant_clean[col_id_ant] = df_ant_clean[col_id_ant].astype(str).str.strip().str.upper()
-        df_nue_clean[col_id_nue] = df_nue_clean[col_id_nue].astype(str).str.strip().str.upper()
+        df_ant_clean = df_ant.copy()
+        df_nue_clean = df_nue.copy()
 
-        # Filtrar cadenas 'NAN' o vacías que resulten de la conversión
-        df_ant_clean = df_ant_clean[~df_ant_clean[col_id_ant].isin(['', 'NAN', 'NONE'])]
-        df_nue_clean = df_nue_clean[~df_nue_clean[col_id_nue].isin(['', 'NAN', 'NONE'])]
+        df_ant_clean["CLAVE_NORM"] = df_ant_clean[col_id_ant].apply(limpiar_clave)
+        df_nue_clean["CLAVE_NORM"] = df_nue_clean[col_id_nue].apply(limpiar_clave)
 
-        # Eliminar registros duplicados por clave en cada archivo
-        df_ant_clean = df_ant_clean.drop_duplicates(subset=[col_id_ant])
-        df_nue_clean = df_nue_clean.drop_duplicates(subset=[col_id_nue])
+        # Filtrar vacíos
+        df_ant_clean = df_ant_clean[df_ant_clean["CLAVE_NORM"] != ""]
+        df_nue_clean = df_nue_clean[df_nue_clean["CLAVE_NORM"] != ""]
 
-        # Nombres tras la unión
-        col_resp_ant_renamed = f"{col_resp_ant}_ANTERIOR"
-        col_resp_nue_renamed = f"{col_resp_nue}_NUEVO"
+        # Eliminar duplicados exactos dentro del mismo archivo
+        df_ant_unique = df_ant_clean.drop_duplicates(subset=["CLAVE_NORM"]).copy()
+        df_nue_unique = df_nue_clean.drop_duplicates(subset=["CLAVE_NORM"]).copy()
 
-        # Cruce de datos (Outer Merge)
+        # Cruce por clave normalizada
         merged = pd.merge(
-            df_ant_clean, 
-            df_nue_clean, 
-            left_on=col_id_ant, 
-            right_on=col_id_nue, 
+            df_ant_unique, 
+            df_nue_unique, 
+            on="CLAVE_NORM", 
             how="outer", 
             suffixes=("_ANTERIOR", "_NUEVO")
         )
 
-        if col_resp_ant_renamed not in merged.columns:
-            col_resp_ant_renamed = col_resp_ant
-        if col_resp_nue_renamed not in merged.columns:
-            col_resp_nue_renamed = col_resp_nue
+        col_resp_ant_renamed = f"{col_resp_ant}_ANTERIOR" if f"{col_resp_ant}_ANTERIOR" in merged.columns else col_resp_ant
+        col_resp_nue_renamed = f"{col_resp_nue}_NUEVO" if f"{col_resp_nue}_NUEVO" in merged.columns else col_resp_nue
+        col_desc_ant_renamed = f"{col_desc_ant}_ANTERIOR" if f"{col_desc_ant}_ANTERIOR" in merged.columns else col_desc_ant
+        col_desc_nue_renamed = f"{col_desc_nue}_NUEVO" if f"{col_desc_nue}_NUEVO" in merged.columns else col_desc_nue
 
-        col_id_ant_m = f"{col_id_ant}_ANTERIOR" if f"{col_id_ant}_ANTERIOR" in merged.columns else col_id_ant
-        col_id_nue_m = f"{col_id_nue}_NUEVO" if f"{col_id_nue}_NUEVO" in merged.columns else col_id_nue
-
-        col_desc_ant_m = f"{col_desc_ant}_ANTERIOR" if f"{col_desc_ant}_ANTERIOR" in merged.columns else col_desc_ant
-        col_desc_nue_m = f"{col_desc_nue}_NUEVO" if f"{col_desc_nue}_NUEVO" in merged.columns else col_desc_nue
-
-        # Classificación de registros
-        encontrados = merged[merged[col_id_ant_m].notna() & merged[col_id_nue_m].notna()].copy()
-        faltantes = merged[merged[col_id_ant_m].notna() & merged[col_id_nue_m].isna()].copy()
-        nuevos = merged[merged[col_id_ant_m].isna() & merged[col_id_nue_m].notna()].copy()
+        # Clasificación estricta
+        encontrados = merged[merged[f"{col_id_ant}_ANTERIOR"].notna() & merged[f"{col_id_nue}_NUEVO"].notna()].copy() if f"{col_id_ant}_ANTERIOR" in merged.columns else merged[merged[col_id_ant].notna() & merged[col_id_nue].notna()].copy()
+        
+        faltantes = merged[merged["CLAVE_NORM"].isin(df_ant_unique["CLAVE_NORM"]) & ~merged["CLAVE_NORM"].isin(df_nue_unique["CLAVE_NORM"])].copy()
+        nuevos = merged[~merged["CLAVE_NORM"].isin(df_ant_unique["CLAVE_NORM"]) & merged["CLAVE_NORM"].isin(df_nue_unique["CLAVE_NORM"])].copy()
 
         if not encontrados.empty:
             def detectar_cambio(row):
                 r_ant = str(row[col_resp_ant_renamed]).strip() if pd.notna(row[col_resp_ant_renamed]) else ""
                 r_nue = str(row[col_resp_nue_renamed]).strip() if pd.notna(row[col_resp_nue_renamed]) else ""
-                if r_ant == r_nue:
-                    return "Sin cambio de resguardo"
-                return "⚠️ Cambio de resguardante"
+                return "Sin cambio de resguardo" if r_ant == r_nue else "⚠️ Cambio de resguardante"
 
             encontrados["Estado_Resguardo"] = encontrados.apply(detectar_cambio, axis=1)
 
         # Métricas principales
         m1, m2, m3, m4, m5 = st.columns(5)
-        m1.metric("Inventario Anterior (Válidos)", len(df_ant_clean))
-        m2.metric("Inventario Nuevo (Válidos)", len(df_nue_clean))
+        m1.metric("Anterior (Válidos)", len(df_ant_unique))
+        m2.metric("Nuevo (Válidos)", len(df_nue_unique))
         m3.metric("Bienes Coincidentes", len(encontrados))
         m4.metric("🚨 Faltantes", len(faltantes))
         m5.metric("➕ Sobrantes / Nuevos", len(nuevos))
 
-        # Pestañas de resultados
+        # Pestañas
         tab1, tab2, tab3 = st.tabs([
             "📊 Bienes Coincidentes y Cambios", 
             "🚨 Faltantes (En Anterior, NO en Nuevo)", 
@@ -123,8 +119,8 @@ if file_ant and file_nue:
             st.markdown("### Resumen de Bienes Localizados")
             if not encontrados.empty:
                 resumen_loc = pd.DataFrame({
-                    "Clave Inventario": encontrados[col_id_nue_m],
-                    "Descripción": encontrados[col_desc_nue_m],
+                    "Clave Inventario": encontrados["CLAVE_NORM"],
+                    "Descripción": encontrados[col_desc_nue_renamed],
                     "Resguardante Anterior": encontrados[col_resp_ant_renamed],
                     "Resguardante Actual": encontrados[col_resp_nue_renamed],
                     "Estatus": encontrados["Estado_Resguardo"]
@@ -137,8 +133,8 @@ if file_ant and file_nue:
             st.markdown("### Bienes en el Inventario Anterior NO encontrados en el Nuevo")
             if not faltantes.empty:
                 resumen_falt = pd.DataFrame({
-                    "Clave Inventario": faltantes[col_id_ant_m],
-                    "Descripción": faltantes[col_desc_ant_m],
+                    "Clave Inventario": faltantes["CLAVE_NORM"],
+                    "Descripción": faltantes[col_desc_ant_renamed],
                     "Último Resguardante Conocido": faltantes[col_resp_ant_renamed]
                 })
                 st.dataframe(resumen_falt, use_container_width=True)
@@ -149,15 +145,15 @@ if file_ant and file_nue:
             st.markdown("### Bienes Sobrantes / Nuevas Altas (No estaban en el registro anterior)")
             if not nuevos.empty:
                 resumen_nuev = pd.DataFrame({
-                    "Clave Inventario": nuevos[col_id_nue_m],
-                    "Descripción": nuevos[col_desc_nue_m],
+                    "Clave Inventario": nuevos["CLAVE_NORM"],
+                    "Descripción": nuevos[col_desc_nue_renamed],
                     "Resguardante Actual": nuevos[col_resp_nue_renamed]
                 })
                 st.dataframe(resumen_nuev, use_container_width=True)
             else:
                 st.info("No hay registros nuevos en el último inventario.")
 
-        # Descarga de Reporte consolidado en Excel
+        # Exportación
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             if not encontrados.empty:
@@ -166,7 +162,6 @@ if file_ant and file_nue:
                 resumen_falt.to_excel(writer, sheet_name='Faltantes', index=False)
             if not nuevos.empty:
                 resumen_nuev.to_excel(writer, sheet_name='Sobrantes_Nuevas_Altas', index=False)
-        
         output.seek(0)
 
         st.markdown("---")
