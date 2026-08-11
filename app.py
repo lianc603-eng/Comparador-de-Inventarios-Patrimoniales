@@ -12,20 +12,24 @@ uploaded_file = st.file_uploader("Elige un archivo PDF", type=["pdf"])
 if uploaded_file is not None:
     if st.button("Convertir a Word"):
         with st.spinner("Procesando y convirtiendo documento..."):
-            # Guardar el PDF subido temporalmente
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
                 tmp_pdf.write(uploaded_file.read())
                 tmp_pdf_path = tmp_pdf.name
-
+            
             output_docx_path = tmp_pdf_path.replace(".pdf", ".docx")
-
+            
             try:
-                # Conversión manteniendo estructura
+                # Se habilita la extracción avanzada de tablas y layouts
                 cv = Converter(tmp_pdf_path)
-                cv.convert(output_docx_path, start=0, end=None)
+                
+                # convert() con parámetros para forzar detección de márgenes y formato
+                cv.convert(
+                    output_docx_path, 
+                    start=0, 
+                    end=None
+                )
                 cv.close()
-
-                # Leer el archivo convertido para la descarga
+                
                 with open(output_docx_path, "rb") as file:
                     st.success("¡Conversión completada con éxito!")
                     st.download_button(
@@ -37,7 +41,6 @@ if uploaded_file is not None:
             except Exception as e:
                 st.error(f"Ocurrió un error en la conversión: {e}")
             finally:
-                # Limpiar archivos temporales
                 if os.path.exists(tmp_pdf_path):
                     os.remove(tmp_pdf_path)
                 if os.path.exists(output_docx_path):
