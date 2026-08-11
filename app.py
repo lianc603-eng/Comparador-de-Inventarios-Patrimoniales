@@ -5,7 +5,7 @@ import io
 st.set_page_config(page_title="Comparador de Inventarios", page_icon="📦", layout="wide")
 
 st.title("📦 Comparador de Inventarios Patrimoniales")
-st.write("Sube el inventario **Anterior** y el **Nuevo** para comparar resguardos, ubicaciones y bienes faltantes.")
+st.write("Sube el inventario **Anterior** y el **Nuevo** para comparar resguardos, ubicaciones, bienes faltantes y nuevas altas.")
 
 col1, col2 = st.columns(2)
 
@@ -94,18 +94,23 @@ if file_ant and file_nue:
         # 2. Pendientes de localizar (Estaban en anterior, no en nuevo)
         faltantes = merged[merged[col_id_ant_m].notna() & merged[col_id_nue_m].isna()].copy()
 
-        # 3. Nuevos ingresos (Están en nuevo, no en anterior)
+        # 3. Nuevos ingresos / Sobrantes (Están en nuevo, no en anterior)
         nuevos = merged[merged[col_id_ant_m].isna() & merged[col_id_nue_m].notna()].copy()
 
-        # Métricas
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Inventario Anterior", len(df_ant))
-        m2.metric("Total Inventario Nuevo", len(df_nue))
-        m3.metric("Bienes Localizados", len(encontrados))
-        m4.metric("🚨 Pendientes de Localizar", len(faltantes))
+        # Métricas principales
+        m1, m2, m3, m4, m5 = st.columns(5)
+        m1.metric("Inventario Anterior", len(df_ant))
+        m2.metric("Inventario Nuevo", len(df_nue))
+        m3.metric("Bienes Coincidentes", len(encontrados))
+        m4.metric("🚨 Faltantes", len(faltantes))
+        m5.metric("➕ Sobrantes / Nuevos", len(nuevos))
 
         # Pestañas de resultados
-        tab1, tab2, tab3 = st.tabs(["📊 Bienes Localizados y Cambios", "🚨 Pendientes de Localizar (Faltantes)", "🆕 Nuevos Registros"])
+        tab1, tab2, tab3 = st.tabs([
+            "📊 Bienes Coincidentes y Cambios", 
+            "🚨 Faltantes (En Anterior, NO en Nuevo)", 
+            "➕ Sobrantes / Nuevas Altas (En Nuevo, NO en Anterior)"
+        ])
 
         with tab1:
             st.markdown("### Resumen de Bienes Localizados")
@@ -134,7 +139,7 @@ if file_ant and file_nue:
                 st.success("¡Excelente! Todos los bienes del inventario anterior fueron localizados.")
 
         with tab3:
-            st.markdown("### Bienes Nuevos (No estaban en el registro anterior)")
+            st.markdown("### Bienes Sobrantes / Nuevas Altas (No estaban en el registro anterior)")
             if not nuevos.empty:
                 resumen_nuev = pd.DataFrame({
                     "Clave Inventario": nuevos[col_id_nue_m],
@@ -145,15 +150,15 @@ if file_ant and file_nue:
             else:
                 st.info("No hay registros nuevos en el último inventario.")
 
-        # Descarga Excel
+        # Descarga de Reporte consolidado en Excel
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             if not encontrados.empty:
-                resumen_loc.to_excel(writer, sheet_name='Localizados', index=False)
+                resumen_loc.to_excel(writer, sheet_name='Coincidentes', index=False)
             if not faltantes.empty:
-                resumen_falt.to_excel(writer, sheet_name='Pendientes_Localizar', index=False)
+                resumen_falt.to_excel(writer, sheet_name='Faltantes', index=False)
             if not nuevos.empty:
-                resumen_nuev.to_excel(writer, sheet_name='Bienes_Nuevos', index=False)
+                resumen_nuev.to_excel(writer, sheet_name='Sobrantes_Nuevas_Altas', index=False)
         
         output.seek(0)
 
