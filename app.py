@@ -97,10 +97,6 @@ def normalizar_nombre(val):
 
 st.set_page_config(page_title="Comparador de Inventarios", page_icon="📦", layout="wide")
 
-# --- BARRA LATERAL PARA OPCIONES OPCIONALES ---
-st.sidebar.header("⚙️ Opciones Adicionales")
-incluir_depto = st.sidebar.toggle("🏢 Incluir Departamento asignado al Resguardante", value=False)
-
 st.title("📦 Comparador de Inventarios Patrimoniales")
 st.write("Sube el inventario **Anterior** y el **Nuevo** para comparar resguardos, ubicaciones, bienes faltantes y nuevas altas.")
 
@@ -146,9 +142,15 @@ if file_ant and file_nue:
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
     st.markdown("---")
+    
+    # Interruptor opcional visible en pantalla principal
+    incluir_depto = st.toggle("🏢 Incluir Departamento asignado al Resguardante", value=False)
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
-        # Normalizar claves
+        st.session_state['ejecutado'] = True
+
+    # Renderizar resultados si ya se dio clic al botón
+    if st.session_state.get('ejecutado', False):
         def limpiar_clave(val):
             if pd.isna(val):
                 return ""
@@ -163,15 +165,12 @@ if file_ant and file_nue:
         df_ant_clean["CLAVE_NORM"] = df_ant_clean[col_id_ant].apply(limpiar_clave)
         df_nue_clean["CLAVE_NORM"] = df_nue_clean[col_id_nue].apply(limpiar_clave)
 
-        # Filtrar vacíos
         df_ant_clean = df_ant_clean[df_ant_clean["CLAVE_NORM"] != ""]
         df_nue_clean = df_nue_clean[df_nue_clean["CLAVE_NORM"] != ""]
 
-        # Eliminar duplicados exactos dentro del mismo archivo
         df_ant_unique = df_ant_clean.drop_duplicates(subset=["CLAVE_NORM"]).copy()
         df_nue_unique = df_nue_clean.drop_duplicates(subset=["CLAVE_NORM"]).copy()
 
-        # Cruce por clave normalizada
         merged = pd.merge(
             df_ant_unique, 
             df_nue_unique, 
@@ -185,7 +184,6 @@ if file_ant and file_nue:
         col_desc_ant_renamed = f"{col_desc_ant}_ANTERIOR" if f"{col_desc_ant}_ANTERIOR" in merged.columns else col_desc_ant
         col_desc_nue_renamed = f"{col_desc_nue}_NUEVO" if f"{col_desc_nue}_NUEVO" in merged.columns else col_desc_nue
 
-        # Clasificación estricta
         encontrados = merged[merged[f"{col_id_ant}_ANTERIOR"].notna() & merged[f"{col_id_nue}_NUEVO"].notna()].copy() if f"{col_id_ant}_ANTERIOR" in merged.columns else merged[merged[col_id_ant].notna() & merged[col_id_nue].notna()].copy()
         
         faltantes = merged[merged["CLAVE_NORM"].isin(df_ant_unique["CLAVE_NORM"]) & ~merged["CLAVE_NORM"].isin(df_nue_unique["CLAVE_NORM"])].copy()
@@ -199,7 +197,7 @@ if file_ant and file_nue:
 
             encontrados["Estado_Resguardo"] = encontrados.apply(detectar_cambio, axis=1)
 
-        # Métricas principales
+        # Métricas
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Anterior (Válidos)", len(df_ant_unique))
         m2.metric("Nuevo (Válidos)", len(df_nue_unique))
@@ -272,7 +270,7 @@ if file_ant and file_nue:
             else:
                 st.info("No hay registros nuevos en el último inventario.")
 
-        # Exportación
+        # Exportación Excel
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             if not encontrados.empty:
