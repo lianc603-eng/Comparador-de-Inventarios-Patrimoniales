@@ -124,8 +124,8 @@ if file_ant and file_nue:
     st.success("¡Archivos cargados correctamente!")
     st.markdown("---")
     
-    st.subheader("⚙️ Configuración de Columnas")
-    st.write("Selecciona las columnas correspondientes en cada archivo para realizar la comparación:")
+    st.subheader("⚙️ Configuración de Columnas y Opciones")
+    st.write("Selecciona las columnas correspondientes en cada archivo:")
 
     c1, c2, c3 = st.columns(3)
     
@@ -141,9 +141,10 @@ if file_ant and file_nue:
         col_desc_ant = st.selectbox("Descripción del Bien (Anterior)", df_ant.columns, index=2 if "Descripción del Bien" in df_ant.columns else 0)
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
+    # OPCIÓN VISIBLE SIEMPRE JUNTO A LA CONFIGURACIÓN DE COLUMNAS
     st.markdown("---")
-    # Opción toggle para incluir el departamento
-    incluir_depto = st.toggle("🏢 Incluir Departamento asignado a los Resguardantes", value=False)
+    incluir_depto = st.toggle("🏢 Incluir Departamento asignado al Resguardante (según plantilla base)", value=False)
+    st.markdown("---")
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
         # Normalizar claves
