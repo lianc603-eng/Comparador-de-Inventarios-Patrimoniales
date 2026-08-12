@@ -141,9 +141,8 @@ if file_ant and file_nue:
         col_desc_ant = st.selectbox("Descripción del Bien (Anterior)", df_ant.columns, index=2 if "Descripción del Bien" in df_ant.columns else 0)
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
-    # Opción opcional de incluir departamento
     st.markdown("---")
-    incluir_depto = st.checkbox("🏢 Incluir columna de Departamento asignado al Resguardante", value=False)
+    incluir_depto = st.checkbox("🏢 Incluir columna de Departamento asignado al Resguardante Actual", value=False)
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
         st.session_state['ejecutado'] = True
@@ -217,12 +216,8 @@ if file_ant and file_nue:
                     "Clave Inventario": encontrados["CLAVE_NORM"],
                     "Descripción": encontrados[col_desc_nue_renamed],
                     "Resguardante Anterior": encontrados[col_resp_ant_renamed],
+                    "Resguardante Actual": encontrados[col_resp_nue_renamed],
                 }
-
-                if incluir_depto:
-                    data_dict["Depto. Resguardante Anterior"] = encontrados[col_resp_ant_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
-
-                data_dict["Resguardante Actual"] = encontrados[col_resp_nue_renamed]
 
                 if incluir_depto:
                     data_dict["Depto. Resguardante Actual"] = encontrados[col_resp_nue_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
