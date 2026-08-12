@@ -97,6 +97,10 @@ def normalizar_nombre(val):
 
 st.set_page_config(page_title="Comparador de Inventarios", page_icon="📦", layout="wide")
 
+# --- BARRA LATERAL PARA OPCIONES OPCIONALES ---
+st.sidebar.header("⚙️ Opciones Adicionales")
+incluir_depto = st.sidebar.toggle("🏢 Incluir Departamento asignado al Resguardante", value=False)
+
 st.title("📦 Comparador de Inventarios Patrimoniales")
 st.write("Sube el inventario **Anterior** y el **Nuevo** para comparar resguardos, ubicaciones, bienes faltantes y nuevas altas.")
 
@@ -124,8 +128,8 @@ if file_ant and file_nue:
     st.success("¡Archivos cargados correctamente!")
     st.markdown("---")
     
-    st.subheader("⚙️ Configuración de Columnas y Opciones")
-    st.write("Selecciona las columnas correspondientes en cada archivo:")
+    st.subheader("⚙️ Configuración de Columnas")
+    st.write("Selecciona las columnas correspondientes en cada archivo para realizar la comparación:")
 
     c1, c2, c3 = st.columns(3)
     
@@ -141,9 +145,6 @@ if file_ant and file_nue:
         col_desc_ant = st.selectbox("Descripción del Bien (Anterior)", df_ant.columns, index=2 if "Descripción del Bien" in df_ant.columns else 0)
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
-    # OPCIÓN VISIBLE SIEMPRE JUNTO A LA CONFIGURACIÓN DE COLUMNAS
-    st.markdown("---")
-    incluir_depto = st.toggle("🏢 Incluir Departamento asignado al Resguardante (según plantilla base)", value=False)
     st.markdown("---")
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
@@ -216,18 +217,23 @@ if file_ant and file_nue:
         with tab1:
             st.markdown("### Resumen de Bienes Localizados")
             if not encontrados.empty:
-                resumen_loc = pd.DataFrame({
+                data_dict = {
                     "Clave Inventario": encontrados["CLAVE_NORM"],
                     "Descripción": encontrados[col_desc_nue_renamed],
                     "Resguardante Anterior": encontrados[col_resp_ant_renamed],
-                    "Resguardante Actual": encontrados[col_resp_nue_renamed],
-                    "Estatus": encontrados["Estado_Resguardo"]
-                })
+                }
 
                 if incluir_depto:
-                    resumen_loc["Depto. Resguardante Anterior"] = resumen_loc["Resguardante Anterior"].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
-                    resumen_loc["Depto. Resguardante Actual"] = resumen_loc["Resguardante Actual"].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
+                    data_dict["Depto. Resguardante Anterior"] = encontrados[col_resp_ant_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
 
+                data_dict["Resguardante Actual"] = encontrados[col_resp_nue_renamed]
+
+                if incluir_depto:
+                    data_dict["Depto. Resguardante Actual"] = encontrados[col_resp_nue_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
+
+                data_dict["Estatus"] = encontrados["Estado_Resguardo"]
+
+                resumen_loc = pd.DataFrame(data_dict)
                 st.dataframe(resumen_loc, use_container_width=True)
             else:
                 st.info("No se encontraron coincidencias entre ambos inventarios.")
@@ -235,15 +241,16 @@ if file_ant and file_nue:
         with tab2:
             st.markdown("### Bienes en el Inventario Anterior NO encontrados en el Nuevo")
             if not faltantes.empty:
-                resumen_falt = pd.DataFrame({
+                data_dict_falt = {
                     "Clave Inventario": faltantes["CLAVE_NORM"],
                     "Descripción": faltantes[col_desc_ant_renamed],
                     "Último Resguardante Conocido": faltantes[col_resp_ant_renamed]
-                })
+                }
 
                 if incluir_depto:
-                    resumen_falt["Departamento"] = resumen_falt["Último Resguardante Conocido"].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
+                    data_dict_falt["Departamento"] = faltantes[col_resp_ant_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
 
+                resumen_falt = pd.DataFrame(data_dict_falt)
                 st.dataframe(resumen_falt, use_container_width=True)
             else:
                 st.success("¡Excelente! Todos los bienes del inventario anterior fueron localizados.")
@@ -251,15 +258,16 @@ if file_ant and file_nue:
         with tab3:
             st.markdown("### Bienes Sobrantes / Nuevas Altas (No estaban en el registro anterior)")
             if not nuevos.empty:
-                resumen_nuev = pd.DataFrame({
+                data_dict_nuev = {
                     "Clave Inventario": nuevos["CLAVE_NORM"],
                     "Descripción": nuevos[col_desc_nue_renamed],
                     "Resguardante Actual": nuevos[col_resp_nue_renamed]
-                })
+                }
 
                 if incluir_depto:
-                    resumen_nuev["Departamento"] = resumen_nuev["Resguardante Actual"].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
+                    data_dict_nuev["Departamento"] = nuevos[col_resp_nue_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
 
+                resumen_nuev = pd.DataFrame(data_dict_nuev)
                 st.dataframe(resumen_nuev, use_container_width=True)
             else:
                 st.info("No hay registros nuevos en el último inventario.")
