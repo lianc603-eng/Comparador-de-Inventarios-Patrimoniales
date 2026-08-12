@@ -2,99 +2,6 @@ import streamlit as st
 import pandas as pd
 import io
 
-# Catálogo Maestro del Personal y sus Departamentos
-PERSONAL_DEPTOS = {
-    "SANCHEZ PREVE ROSENDO": "OFICINA DE LA DIRECCION DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "ARGUELLES CASTRO VERONICA BERENICE": "OFICINA DE LA DIRECCION DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "MAY MASS REYNA ANTONIA": "OFICINA DE LA DIRECCION DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "PAREDES MISS RUBEN HILARIO": "OFICINA DE LA DIRECCION DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "R DE LA GALA CHABLE JORGE MARTIN": "OFICINA DE LA DIRECCION DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "BROWN OCAÑA CITLALLI ESTEFANIA": "DEPARTAMENTO ADMINISTRATIVO",
-    "CRUZ PAT LIAN VADHIR": "DEPARTAMENTO ADMINISTRATIVO",
-    "ALONZO HERRERA FRANCISCO JAVIER": "DEPARTAMENTO ADMINISTRATIVO",
-    "EUAN CHABLE MARCO ANTONIO": "DEPARTAMENTO ADMINISTRATIVO",
-    "NAVARRO PACHECO LEIDY CONSUELO": "DEPARTAMENTO ADMINISTRATIVO",
-    "CETINA ARGUELLES RENAN DE ATOCHA": "DEPARTAMENTO JURIDICO",
-    "BRITO AKE GABRIELA BEATRIZ": "DEPARTAMENTO JURIDICO",
-    "VALLE QUEVEDO KARINA DEL CARMEN": "DEPARTAMENTO JURIDICO",
-    "QUEN UC ZOILA REINA DE LOS ANGELES": "DEPARTAMENTO JURIDICO",
-    "PEREZ ANGULO SAMANTHA FERNANDA": "SUBDIRECCION TECNICA DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "SEGOVIA KOYOC IRMA GUADALUPE": "SUBDIRECCION TECNICA DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "REJON CETINA JESSICA": "SUBDIRECCION TECNICA DE DESARROLLO URBANO Y MEDIO AMBIENTE",
-    "HERNANDEZ FERNANDEZ SUSUKI ENID": "DEPARTAMENTO DE INSPECCION",
-    "CANUL MISS BRENDA ELENA": "DEPARTAMENTO DE INSPECCION",
-    "CHAN MIAN JUAN NOEL": "DEPARTAMENTO DE INSPECCION",
-    "DZUL QUE ROMAN JESUS": "DEPARTAMENTO DE INSPECCION",
-    "CAHUICH MANRRERO LUIS ALBERTO": "DEPARTAMENTO DE INSPECCION",
-    "SARAVIA PACHECO AXEL ALONSO": "DEPARTAMENTO DE INSPECCION",
-    "CONTRERAS SALAZAR FRANCISCO XAVIER": "DEPARTAMENTO DE INSPECCION",
-    "COBOS ZAPATA DELTA PATRICIA": "DEPARTAMENTO DE INSPECCION",
-    "CAHUICH CHE DIANA BEATRIZ": "DEPARTAMENTO OPERATIVO",
-    "BURAD SANCHEZ KARIME DEL CARMEN": "DEPARTAMENTO DE VIABILIDAD Y CULTURA AMBIENTAL",
-    "FUENTES RIVERO VICTORIA GUADALUPE": "SUBDIRECCION DE DESARROLLO URBANO",
-    "TE MORENO MARTINA DEL CARMEN": "SUBDIRECCION DE DESARROLLO URBANO",
-    "ABREU ARTEAGA PAULA ESTELA": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "BOLIVAR RODRIGUEZ DANIEL ENRIQUE": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "ESPINOSA UC JUAN GABRIEL": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "HERRERA CHI AGUSTIN HIGINIO": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "CAMARA LARA JOSE ADRIAN": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "UC MAY JOSE MARTIN": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "AGUILAR BALAM ADRIANA MARGARITA": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "CUANDON ALONZO ZOILA FARIDE": "DEPARTAMENTO DE NOMENCLATURA Y SEÑALIZACION",
-    "ZETINA BARRIENTOS JORGE PABLO": "DEPARTAMENTO DE URBANISMO",
-    "PECH MUT FRANCISCO ALBERTO": "DEPARTAMENTO DE URBANISMO",
-    "SULU CABALLERO PEDRO DAVID": "DEPARTAMENTO DE URBANISMO",
-    "PEREZ MACIAS HECTOR LEONEL": "DEPARTAMENTO DE URBANISMO",
-    "ZAZUETA HERNANDEZ MASILEMA DEL ROCIO": "DEPARTAMENTO DE URBANISMO",
-    "UICAB CORTEZ SALVADOR": "DEPARTAMENTO DE URBANISMO",
-    "GALLARDO PINO ALEJANDRA": "DEPARTAMENTO DE URBANISMO",
-    "MAY ACOSTA GREGORIO ALAN": "COORDINACION DE IMAGEN URBANA Y LICENCIAS",
-    "CHAVEZ GARDUZA TATIANA ISABEL": "COORDINACION DE IMAGEN URBANA Y LICENCIAS",
-    "CU TUZ CARLOS GUADALUPE": "DEPARTAMENTO DE MOVILIDAD URBANA Y ZONA HISTORICA",
-    "ALCOCER PAVON FARID ADAN": "DEPARTAMENTO DE MOVILIDAD URBANA Y ZONA HISTORICA",
-    "PACHECO MARTINEZ HELDER DE JESUS": "COORDINACION DE INSPECCION URBANA",
-    "FLORES VERGAR MARIO EDIBERTO": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "PEREZ MAZIN CARLOS EDUARDO": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "ARROYO AVILEZ IRAID EDEY": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "COB CHAVEZ NARCISO DEL JESUS": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "ORTEGA VILLACIS LUIS ALBERTO": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "MEDINA PEREZ SANDRA BEATRIZ": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "RIVERO TUN GLORIA GEOVANA": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "DE LA CRUZ PEREZ WILLIAN ARLEY": "DEPARTAMENTO DE INSPECCION URBANA Y NOTIFICACION",
-    "GONZALEZ MARIN ANA ALEXANDRA": "SUBDIRECCION DE MEDIO AMBIENTE",
-    "HAU LEON OMAR IVAN": "SUBDIRECCION DE MEDIO AMBIENTE",
-    "RODRIGUEZ MADRIGAL JOSUE": "SUBDIRECCION DE MEDIO AMBIENTE",
-    "GONZALEZ CASTILLO ANGEL SANTIAGO": "SUBDIRECCION DE MEDIO AMBIENTE",
-    "SALAZAR BADILLO JESUS ESTEBAN": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "ESCALANTE NOH EMIGDIO ELIAS": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "CABALLERO LOPEZ JOSE JUAN": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "QUEVEDO CONTRERAS JOSE LUIS": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "BARRIENTOS JIMENEZ JORGE LUIS": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "MEDINA QUIJANO CARLOS ENRIQUE": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "RAMIREZ KU MARTIN FEDERICO": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "VAZQUEZ ESTRELLA JUAN ESTEBAN": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "CAMARA MARTINEZ JORGE MELIK": "COORDINACION DE GESTION Y CONTROL OPERATIVO AMBIENTAL",
-    "MANZANILLA GONZALEZ ROBERTO FRANCISCO": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "OROPEZA CHAVEZ OMAR": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "DEL ANGEL TAFOYA FAUSTO ROLANDO": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "CORDOVA GARCIA FLORISEL": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "KANTUN CHABLE ERNESTO WILIAN": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "SAGUNDO GONZALEZ VALDEMAR": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "CALDERON COLLI FERNANDO MARTIN": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "PEREZ GOMEZ MANUEL ALEJANDRO": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "BUSTAMANTE CU MIGUEL ANTONIO": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "HERRERA RIVERO MIGUEL ANGEL": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "MARTINEZ CELIS EDITH CONCEPCION": "DEPARTAMENTO DE BIENESTAR ANIMAL",
-    "LIC. SANCHEZ PREVE ROSENDO": "BODEGA DE LA OFICINA",
-    "PECH MUT FRANCISCO ALBERTO 2": "BODEGA DE DESARROLLO URBANO",
-    "CAIM": "SUBDIRECCION DE MEDIO AMBIENTE"
-}
-
-def normalizar_nombre(val):
-    if pd.isna(val):
-        return ""
-    return str(val).strip().upper()
-
 st.set_page_config(page_title="Comparador de Inventarios", page_icon="📦", layout="wide")
 
 st.title("📦 Comparador de Inventarios Patrimoniales")
@@ -142,14 +49,10 @@ if file_ant and file_nue:
         col_desc_nue = st.selectbox("Descripción del Bien (Nuevo)", df_nue.columns, index=2 if "Descripción del Bien" in df_nue.columns else 0)
 
     st.markdown("---")
-    
-    # Interruptor opcional visible en pantalla principal
-    incluir_depto = st.toggle("🏢 Incluir Departamento asignado al Resguardante", value=False)
 
     if st.button("🔍 Comparar Inventarios", type="primary"):
         st.session_state['ejecutado'] = True
 
-    # Renderizar resultados si ya se dio clic al botón
     if st.session_state.get('ejecutado', False):
         def limpiar_clave(val):
             if pd.isna(val):
@@ -189,15 +92,15 @@ if file_ant and file_nue:
         faltantes = merged[merged["CLAVE_NORM"].isin(df_ant_unique["CLAVE_NORM"]) & ~merged["CLAVE_NORM"].isin(df_nue_unique["CLAVE_NORM"])].copy()
         nuevos = merged[~merged["CLAVE_NORM"].isin(df_ant_unique["CLAVE_NORM"]) & merged["CLAVE_NORM"].isin(df_nue_unique["CLAVE_NORM"])].copy()
 
+        # Evaluación de Estatus
         if not encontrados.empty:
-            def detectar_cambio(row):
-                r_ant = str(row[col_resp_ant_renamed]).strip() if pd.notna(row[col_resp_ant_renamed]) else ""
-                r_nue = str(row[col_resp_nue_renamed]).strip() if pd.notna(row[col_resp_nue_renamed]) else ""
-                return "Sin cambio de resguardo" if r_ant == r_nue else "⚠️ Cambio de resguardante"
+            def evaluar_estatus(row):
+                resp = str(row[col_resp_nue_renamed]).strip() if pd.notna(row[col_resp_nue_renamed]) else ""
+                return "ENCONTRADO" if resp != "" else "PENDIENTE DE LOCALIZAR"
 
-            encontrados["Estado_Resguardo"] = encontrados.apply(detectar_cambio, axis=1)
+            encontrados["Estado_Resguardo"] = encontrados.apply(evaluar_estatus, axis=1)
 
-        # Métricas
+        # Métricas principales
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Anterior (Válidos)", len(df_ant_unique))
         m2.metric("Nuevo (Válidos)", len(df_nue_unique))
@@ -215,23 +118,13 @@ if file_ant and file_nue:
         with tab1:
             st.markdown("### Resumen de Bienes Localizados")
             if not encontrados.empty:
-                data_dict = {
+                resumen_loc = pd.DataFrame({
                     "Clave Inventario": encontrados["CLAVE_NORM"],
                     "Descripción": encontrados[col_desc_nue_renamed],
                     "Resguardante Anterior": encontrados[col_resp_ant_renamed],
-                }
-
-                if incluir_depto:
-                    data_dict["Depto. Resguardante Anterior"] = encontrados[col_resp_ant_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
-
-                data_dict["Resguardante Actual"] = encontrados[col_resp_nue_renamed]
-
-                if incluir_depto:
-                    data_dict["Depto. Resguardante Actual"] = encontrados[col_resp_nue_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
-
-                data_dict["Estatus"] = encontrados["Estado_Resguardo"]
-
-                resumen_loc = pd.DataFrame(data_dict)
+                    "Resguardante Actual": encontrados[col_resp_nue_renamed],
+                    "Estatus": encontrados["Estado_Resguardo"]
+                })
                 st.dataframe(resumen_loc, use_container_width=True)
             else:
                 st.info("No se encontraron coincidencias entre ambos inventarios.")
@@ -239,16 +132,11 @@ if file_ant and file_nue:
         with tab2:
             st.markdown("### Bienes en el Inventario Anterior NO encontrados en el Nuevo")
             if not faltantes.empty:
-                data_dict_falt = {
+                resumen_falt = pd.DataFrame({
                     "Clave Inventario": faltantes["CLAVE_NORM"],
                     "Descripción": faltantes[col_desc_ant_renamed],
                     "Último Resguardante Conocido": faltantes[col_resp_ant_renamed]
-                }
-
-                if incluir_depto:
-                    data_dict_falt["Departamento"] = faltantes[col_resp_ant_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
-
-                resumen_falt = pd.DataFrame(data_dict_falt)
+                })
                 st.dataframe(resumen_falt, use_container_width=True)
             else:
                 st.success("¡Excelente! Todos los bienes del inventario anterior fueron localizados.")
@@ -256,21 +144,16 @@ if file_ant and file_nue:
         with tab3:
             st.markdown("### Bienes Sobrantes / Nuevas Altas (No estaban en el registro anterior)")
             if not nuevos.empty:
-                data_dict_nuev = {
+                resumen_nuev = pd.DataFrame({
                     "Clave Inventario": nuevos["CLAVE_NORM"],
                     "Descripción": nuevos[col_desc_nue_renamed],
                     "Resguardante Actual": nuevos[col_resp_nue_renamed]
-                }
-
-                if incluir_depto:
-                    data_dict_nuev["Departamento"] = nuevos[col_resp_nue_renamed].apply(normalizar_nombre).map(PERSONAL_DEPTOS).fillna("")
-
-                resumen_nuev = pd.DataFrame(data_dict_nuev)
+                })
                 st.dataframe(resumen_nuev, use_container_width=True)
             else:
                 st.info("No hay registros nuevos en el último inventario.")
 
-        # Exportación Excel
+        # Exportación
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             if not encontrados.empty:
